@@ -1,0 +1,8 @@
+[Application]
+Lang = "ru"
+LogLevel = "debug"
+LogFormat = "text"
+
+[Broker]
+UserURL = "rabbitmq-admin.prod.faem.pro"
+UserCredits = "admin:tymYsvXVh9xYltjs"
