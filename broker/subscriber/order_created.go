@@ -93,8 +93,10 @@ func (s *Subscriber) HandleNewOrder(ctx context.Context, msg amqp.Delivery) erro
 			int64(cartItem.TotalItemPrice))
 	}
 
-	err := s.Handler.Gmail.SendMail([]string{"den@faem.me"}, "Заказ №"+order.ID, message, false)
-	log.WithError(err).Error("fail to send mail message")
+	err := s.Handler.Gmail.SendMail([]string{"pomidor.orders@gmail.com"}, "Заказ №"+order.ID, message, false)
+	if err != nil {
+		log.WithError(err).Error("fail to send mail message")
+	}
 
 	return nil
 }

@@ -9,6 +9,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/viper v1.8.1
 	github.com/streadway/amqp v1.0.0
+	github.com/zsefvlol/timezonemapper v1.0.0
 	gitlab.com/faemproject/backend/core/shared v0.9.24
 	gitlab.com/faemproject/backend/eda/eda.core v0.29.2
 	go.uber.org/multierr v1.7.0
