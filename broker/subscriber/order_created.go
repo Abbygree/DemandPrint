@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
-	"github.com/zsefvlol/timezonemapper"
 	"gitlab.com/faemproject/backend/core/shared/lang"
 	"gitlab.com/faemproject/backend/core/shared/logs"
 	"gitlab.com/faemproject/backend/core/shared/structures/errpath"
@@ -16,7 +15,6 @@ import (
 	"gitlab.com/faemproject/backend/eda/eda.core/services/orders/proto"
 	"math"
 	"strings"
-	"time"
 )
 
 const (
@@ -24,19 +22,20 @@ const (
 	DemandCreatedOrderQueue    = "demand.order.created"
 	DemandCreatedOrderConsumer = "demand.order.created"
 
-	htmlBodyTemplate = `<html>
+	hmltTemplate = `Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html><html>
 	<head>
-		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-		<title>Hello Gophers!</title>
 		<style>
    			h1 {
-    		font-family: 'Times New Roman', Times, serif; /* Гарнитура текста */ 
-    		font-size: 150%; 
-   		}
-  </style>
+    		font-family: 'Times New Roman', Times, serif; 
+    		font-size: 125%; 
+			}
+ 		 </style>
 	</head>
 	<body>
-		<p>Replaceable</b>.</p>
+		<h1>Text</h1>
 	</body>
 </html>`
 )
@@ -54,65 +53,28 @@ func (s *Subscriber) HandleNewOrder(ctx context.Context, msg amqp.Delivery) erro
 		"order-uuid": order.UUID,
 	})
 
-	localTimezone := timezonemapper.LatLngToTimezoneString(float64(order.StoreData.Lat), float64(order.StoreData.Lon))
-	log.WithFields(logrus.Fields{
-		"lat":      order.StoreData.Lat,
-		"lon":      order.StoreData.Lon,
-		"timezone": localTimezone,
-		"event":    "get store timezone",
-	}).Print()
-	loc, _ := time.LoadLocation(localTimezone)
-	localTime := order.CreatedAt.In(loc)
+	message += fmt.Sprintf("Заказ: %s<br>", order.ID)
 
-	message += fmt.Sprintf("Заведение: %s (%s)\nЗаказ: %s (%s)\nКлиент: %s (%s)\n",
-		order.StoreData.Name,
-		order.StoreData.Address.UnrestrictedValue,
-
-		order.ID,
-		localTime.Format("2006-01-02 15:04:05"),
-
-		order.ClientData.Name,
-		order.ClientData.MainPhone)
-
-	if order.WithoutDelivery == true {
-		message += fmt.Sprintf("Доставка: %s\n", "Самовывоз")
-	} else {
-		message += fmt.Sprintf("Доставка: %s\n", order.DeliveryData.Address.UnrestrictedValue)
-		if order.DeliveryData.AddressDetails.Entrance != "" {
-			message += fmt.Sprintf("\t\tподъезд: %s,\n", order.DeliveryData.AddressDetails.Entrance)
-		}
-		if order.DeliveryData.AddressDetails.Apartment != "" {
-			message += fmt.Sprintf("\t\tкв. %s,\n", order.DeliveryData.AddressDetails.Apartment)
-		}
-		if order.DeliveryData.AddressDetails.Intercom != "" {
-			message += fmt.Sprintf("\t\tдомофон: %s,\n", order.DeliveryData.AddressDetails.Intercom)
-		}
-		if order.DeliveryData.AddressDetails.Floor != "" {
-			message += fmt.Sprintf("\t\tэтаж: %s\n", order.DeliveryData.AddressDetails.Floor)
-		}
-	}
-
-	paymentTypeMap := map[string]string{
-		"cash": "наличными",
-		"card": "картой",
-	}
-
-	message += fmt.Sprintf("Сумма заказа: %d₽(%s)\nКомментарий: %s\n\nСостав заказа:\n",
+	message += fmt.Sprintf("Сумма заказа: %d₽<br>Комментарий: %s<br><br>Состав заказа:<br>",
 		int64(math.Ceil(order.CalcTotalPrice()*(1-order.Promotion.DiscountPercentage))),
-		paymentTypeMap[order.PaymentType],
 		order.Comment)
 
+	message += `<table border="1" width="100%" cellpadding="5">`
 	for _, cartItem := range order.CartItems {
-		message += fmt.Sprintf("- %s %d₽ x %d = %d₽\n",
+		message += `<tr>`
+		message += fmt.Sprintf("<th>%s %d₽ x %d = %d₽</th>",
 			cartItem.Product.Name,
 			int64(cartItem.SingleItemPrice),
 			cartItem.Count,
 			int64(cartItem.TotalItemPrice))
+		message += `<th style="width:5%;"></th>`
+		message += `</tr>`
 	}
+	message += `</table>`
 
-	messageHTML = strings.ReplaceAll(htmlBodyTemplate, "Replaceable", message)
+	messageHTML = strings.ReplaceAll(hmltTemplate, "Text", message)
 
-	err := s.Handler.Gmail.SendMail([]string{"pomidor.orders@gmail.com"}, "Заказ №"+order.ID, messageHTML, true)
+	err := s.Handler.Gmail.SendMail([]string{"pomidor.orders@gmail.com"}, "Заказ №"+order.ID, messageHTML, false)
 	if err != nil {
 		log.WithError(err).Error("fail to send mail message")
 	}
