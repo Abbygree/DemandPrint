@@ -2,7 +2,7 @@ package handler
 
 import (
 	"DemandPrint/config"
-	"github.com/njern/gogmail"
+	"github.com/Abbygree/gogmail"
 )
 
 type (

@@ -8,7 +8,7 @@ import (
 	"DemandPrint/config"
 	"DemandPrint/handler"
 	"fmt"
-	"github.com/njern/gogmail"
+	"github.com/Abbygree/gogmail"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/faemproject/backend/core/shared/rabbit"
