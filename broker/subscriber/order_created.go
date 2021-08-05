@@ -15,6 +15,7 @@ import (
 	"gitlab.com/faemproject/backend/eda/eda.core/services/orders/models"
 	"gitlab.com/faemproject/backend/eda/eda.core/services/orders/proto"
 	"math"
+	"strings"
 	"time"
 )
 
@@ -22,10 +23,26 @@ const (
 	maxNewOrderStatesAllowed   = 100
 	DemandCreatedOrderQueue    = "demand.order.created"
 	DemandCreatedOrderConsumer = "demand.order.created"
+
+	htmlBodyTemplate = `<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<title>Hello Gophers!</title>
+		<style>
+   			h1 {
+    		font-family: 'Times New Roman', Times, serif; /* Гарнитура текста */ 
+    		font-size: 150%; 
+   		}
+  </style>
+	</head>
+	<body>
+		<p>Replaceable</b>.</p>
+	</body>
+</html>`
 )
 
 func (s *Subscriber) HandleNewOrder(ctx context.Context, msg amqp.Delivery) error {
-	var message string
+	var message, messageHTML string
 	// Decode incoming message
 	var order models.Order
 	if err := s.Encoder.Decode(msg.Body, &order); err != nil {
@@ -93,7 +110,9 @@ func (s *Subscriber) HandleNewOrder(ctx context.Context, msg amqp.Delivery) erro
 			int64(cartItem.TotalItemPrice))
 	}
 
-	err := s.Handler.Gmail.SendMail([]string{"pomidor.orders@gmail.com"}, "Заказ №"+order.ID, message, false)
+	messageHTML = strings.ReplaceAll(htmlBodyTemplate, "Replaceable", message)
+
+	err := s.Handler.Gmail.SendMail([]string{"pomidor.orders@gmail.com"}, "Заказ №"+order.ID, messageHTML, true)
 	if err != nil {
 		log.WithError(err).Error("fail to send mail message")
 	}
